@@ -15,7 +15,32 @@ OpenCLI 可以用同一套 CLI 做三类事情：
 
 - **直接使用现成适配器**：B站、知乎、小红书、Twitter/X、Reddit、HackerNews 等 [100+ 站点](#内置命令) 开箱即用。
 - **让 AI Agent 操作任意网站**：在你的 AI Agent（Claude Code、Cursor 等）中安装 `opencli-browser` skill，Agent 就能用你的已登录浏览器导航、点击、输入/填充、提取任意网页内容。
-- **把新网站写成 CLI**：用 `opencli browser` 原语 + `opencli-adapter-author` skill，从站点侦察、API 发现、字段解码到 `opencli browser verify` 一条龙。
+- **把新网站写成 CLI**：用 `opencli browser` 原语 + `opencli-adapter-author` skill，从站点侦察、API 发现、字段解码到 `opencli adapter test` 一条龙。
+
+
+## Agent 命令约定
+
+命令默认返回 JSON：`{ "ok": true, "data": ... }`。失败返回
+`{ "ok": false, "error": { "code": "...", "message": "...", "hint": "..." } }`
+并设置非零 exit code。结果写入 stdout，日志写入 stderr。显式指定的展示格式、
+help、version 和 completion 保留各自格式；browser follow 模式使用 JSON Lines。
+
+```sh
+opencli list search --site github
+opencli browser open https://example.com --session research
+opencli browser network --static --session research
+opencli browser chrome describe
+opencli adapter check github/search
+```
+
+`list` 返回精简的分页结果（`commands`、`total`、`nextOffset`），详细参数通过
+`<command> --help -f json` 查询。页面操作使用 `--session`，native Chrome 调用无需 session。
+adapter 开发入口统一为 `adapter init|check|test`；`state --diagnostics` 和
+`network --static` 取代 `analyze`、`discover`。
+
+本次调整改变 CLI 语法和 JSON 输出，JS adapter 的 `cli({...})`、`func(args)`、
+`func(page,args)` 接口保持不变；adapter 的 `defaultFormat` 不再影响 CLI 默认格式。
+
 
 ## 快速开始
 
@@ -78,7 +103,7 @@ opencli bilibili hot --limit 5
 | 需求 | 推荐路径 |
 |------|----------|
 | 把个人网站命令放在自己的 Git repo | `opencli plugin create` + `opencli plugin install file://...` |
-| 快速写一个本机私人 adapter | `opencli browser init <site>/<command>`，放在 `~/.opencli/clis/` |
+| 快速写一个本机私人 adapter | `opencli adapter init <site>/<command>`，放在 `~/.opencli/clis/` |
 | 本地修改官方 adapter | `opencli adapter eject <site>` + `opencli adapter reset <site>` |
 | 发布或安装第三方命令 | `opencli plugin install github:user/repo` |
 
@@ -128,9 +153,9 @@ Agent 在内部自动处理所有 `opencli browser` 命令——你只需用自�
 - [`skills/opencli-autofix/SKILL.md`](./skills/opencli-autofix/SKILL.md) — 修复已有适配器
 - [`skills/opencli-usage/SKILL.md`](./skills/opencli-usage/SKILL.md) — 命令和站点参考
 
-`browser` 可用命令包括：`open`、`state`、`click`、`type`、`fill`、`select`、`keys`、`wait`、`get`、`find`、`extract`、`frames`、`screenshot`、`scroll`、`back`、`eval`、`network`、`tab list`、`tab new`、`tab select`、`tab close`、`init`、`verify`、`close`。
+`browser` 可用命令包括：`open`、`state`、`click`、`type`、`fill`、`select`、`keys`、`wait`、`get`、`find`、`extract`、`frames`、`screenshot`、`scroll`、`back`、`eval`、`network`、`tab list`、`tab new`、`tab select`、`tab close`、`chrome describe`、`chrome call`、`close`。
 
-`opencli browser` 命令必须紧跟一个 `<session>` 位置参数。`opencli browser work open <url>` 和 `opencli browser work tab new [url]` 都会返回 target ID。`opencli browser work tab list` 用来查看当前已存在 tab 的 target ID，再通过 `--tab <targetId>` 把命令明确路由到某个 tab。`tab new` 只会新建 tab，不会改变默认浏览器目标；只有显式执行 `tab select <targetId>`，才会把该 tab 设为同一 session 后续未指定 target 的默认目标。
+`opencli browser` 命令通过 `--session <name>` 指定页面 session。`opencli browser --session work open <url>` 和 `opencli browser --session work tab new [url]` 都会返回 target ID。`opencli browser --session work tab list` 用来查看当前已存在 tab 的 target ID，再通过 `--tab <targetId>` 把命令明确路由到某个 tab。`tab new` 只会新建 tab，不会改变默认浏览器目标；只有显式执行 `tab select <targetId>`，才会把该 tab 设为同一 session 后续未指定 target 的默认目标。
 
 ## 为新站点写适配器
 
@@ -158,7 +183,7 @@ Agent 在内部自动处理所有 `opencli browser` 命令——你只需用自�
 
 Browser Bridge daemon 与扩展的通信端口固定为 `localhost:19825`，不再支持通过 `OPENCLI_DAEMON_PORT` 配置自定义端口。
 
-`opencli browser *` 必须紧跟一个 `<session>` 位置参数，默认使用前台窗口，并保留该 session 的 tab lease，直到你手动执行 `opencli browser <session> close` 或等空闲超时。浏览器型 adapter 默认使用后台 adapter 窗口并在命令结束后释放一次性 tab lease；如果需要调试最终页面，可以传 `--window foreground --keep-tab true`。
+`opencli browser *` 通过 `--session <name>` 指定页面 session，默认使用前台窗口，并保留该 session 的 tab lease，直到你手动执行 `opencli browser --session <session> close` 或等空闲超时。浏览器型 adapter 默认使用后台 adapter 窗口并在命令结束后释放一次性 tab lease；如果需要调试最终页面，可以传 `--window foreground --keep-tab true`。
 
 ## 内置命令
 
@@ -259,7 +284,7 @@ opencli weixin download --url "https://mp.weixin.qq.com/s/xxx" --output ./weixin
 
 ## 输出格式
 
-所有内置命令都支持 `--format` / `-f`，可选值为 `table`、`json`、`yaml`、`md`、`csv`。
+所有内置命令都支持 `--format` / `-f`，可选值为 `table`、`json`（默认）、`yaml`、`md`、`csv`。
 `list` 命令也支持同样的格式参数，同时继续兼容 `--json`。
 
 ```bash

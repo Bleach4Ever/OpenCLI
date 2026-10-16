@@ -7,6 +7,7 @@
 
 declare const __OPENCLI_COMPAT_RANGE__: string;
 
+import { callChrome, describeChrome, ChromeApiError } from './chrome-api';
 import type { Command, Result } from './protocol';
 import { DAEMON_HOST, DAEMON_PORT, DAEMON_WS_URL, DAEMON_PING_URL } from './protocol';
 import * as executor from './cdp';
@@ -1311,6 +1312,17 @@ async function fetchDaemonVersion(): Promise<string | null> {
 // ─── Command dispatcher ─────────────────────────────────────────────
 
 async function handleCommand(cmd: Command): Promise<Result> {
+  // Native browser resources do not belong to a page session or idle timer.
+  if (cmd.action === 'chrome-describe' || cmd.action === 'chrome-call') {
+    try {
+      if (cmd.action === 'chrome-describe') return { id: cmd.id, ok: true, data: await describeChrome(cmd.chromeMethod) };
+      return await withLeaseMutation(async () => ({ id: cmd.id, ok: true, data: await callChrome(
+        cmd.chromeMethod ?? '', cmd.chromeArgs ?? [],
+        new Set([...automationSessions.values()].map(s => s.preferredTabId).filter((id): id is number => id !== null)),
+        new Set([...interactiveGroupLedger, ...Object.values(ownedContainers).map(c => c.groupId).filter((id): id is number => id !== null)]),
+      ) }));
+    } catch (error) { return errorResult(cmd.id, error); }
+  }
   const session = getSessionName(cmd.session);
   const surface = getCommandSurface(cmd);
   const leaseKey = getLeaseKey(session, surface);
@@ -1670,7 +1682,7 @@ function classifyExtensionError(message: string): string | undefined {
 
 function errorResult(id: string, err: unknown): Result {
   const message = err instanceof Error ? err.message : String(err);
-  if (err instanceof CommandFailure) {
+  if (err instanceof CommandFailure || err instanceof ChromeApiError) {
     return { id, ok: false, error: message, errorCode: err.code, ...(err.hint ? { errorHint: err.hint } : {}) };
   }
   const errorCode = classifyExtensionError(message);

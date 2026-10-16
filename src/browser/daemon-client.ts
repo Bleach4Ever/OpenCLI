@@ -206,10 +206,12 @@ function isPreConnectFetchError(err: unknown): boolean {
 
 export interface DaemonCommand {
   id: string;
-  action: 'exec' | 'navigate' | 'tabs' | 'cookies' | 'screenshot' | 'close-window' | 'set-file-input' | 'insert-text' | 'bind' | 'network-capture-start' | 'network-capture-read' | 'wait-download' | 'cdp' | 'frames' | 'lease-release';
+  action: 'chrome-call' | 'chrome-describe' | 'exec' | 'navigate' | 'tabs' | 'cookies' | 'screenshot' | 'close-window' | 'set-file-input' | 'insert-text' | 'bind' | 'network-capture-start' | 'network-capture-read' | 'wait-download' | 'cdp' | 'frames' | 'lease-release';
   /** Target page identity (targetId). Cross-layer contract with the extension. */
   page?: string;
   code?: string;
+  chromeMethod?: string;
+  chromeArgs?: unknown[];
   session?: string;
   surface?: 'browser' | 'adapter';
   /** Adapter site session lifecycle. Persistent site sessions do not idle-expire. */

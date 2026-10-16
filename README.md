@@ -15,7 +15,31 @@ OpenCLI gives you one surface for three different kinds of automation:
 
 - **Use built-in adapters** for sites like Bilibili, Zhihu, Xiaohongshu, Reddit, HackerNews, Twitter/X, and [many more](#built-in-commands).
 - **Let AI Agents operate any website** — install the `opencli-browser` skill in your AI agent (Claude Code, Cursor, etc.), and it can navigate, click, type/fill, extract, and inspect any page through your logged-in browser via `opencli browser` primitives.
-- **Write new adapters** end-to-end with `opencli browser` + the `opencli-adapter-author` skill, which guides from first recon through field decoding, code, and `opencli browser verify`.
+- **Write new adapters** end-to-end with `opencli browser` + the `opencli-adapter-author` skill, which guides from first recon through field decoding, code, and `opencli adapter test`.
+
+
+## Agent command contract
+
+Commands default to JSON: `{ "ok": true, "data": ... }`; failures return
+`{ "ok": false, "error": { "code": "...", "message": "...", "hint": "..." } }`
+on stdout with a nonzero exit code. Logs use stderr. Explicit human formats,
+help, version and completion retain their own formats; browser follow modes use JSON Lines.
+
+```sh
+opencli list search --site github
+opencli browser open https://example.com --session research
+opencli browser network --static --session research
+opencli browser chrome describe
+opencli adapter check github/search
+```
+
+`list` returns compact, paginated capabilities (`commands`, `total`, `nextOffset`);
+read arguments with `<command> --help -f json`. Page scope is `--session`, native
+Chrome calls need no session. Adapter authoring is grouped under `adapter init|check|test`.
+`state --diagnostics` and `network --static` replace `analyze` and `discover`.
+This changes CLI syntax and JSON output. JS adapters keep `cli({...})`,
+`func(args)` and `func(page, args)`; adapter `defaultFormat` no longer changes the CLI default.
+
 
 ## Quick Start
 
@@ -92,7 +116,7 @@ If you want to add your own commands, start with the [Extending OpenCLI guide](.
 | Need | Recommended path |
 |------|------------------|
 | Keep personal website commands in your own Git repo | `opencli plugin create` + `opencli plugin install file://...` |
-| Quickly draft a private local adapter | `opencli browser init <site>/<command>` in `~/.opencli/clis/` |
+| Quickly draft a private local adapter | `opencli adapter init <site>/<command>` in `~/.opencli/clis/` |
 | Modify an official adapter locally | `opencli adapter eject <site>` + `opencli adapter reset <site>` |
 | Publish or install third-party commands | `opencli plugin install github:user/repo` |
 
@@ -142,9 +166,9 @@ The agent handles all the `opencli browser` commands internally — you just des
 - [`skills/opencli-autofix/SKILL.md`](./skills/opencli-autofix/SKILL.md) — repair broken adapters
 - [`skills/opencli-usage/SKILL.md`](./skills/opencli-usage/SKILL.md) — command and site reference
 
-Available browser commands include `open`, `state`, `click`, `type`, `fill`, `select`, `keys`, `wait`, `get`, `find`, `extract`, `frames`, `screenshot`, `scroll`, `back`, `eval`, `network`, `tab list`, `tab new`, `tab select`, `tab close`, `init`, `verify`, and `close`.
+Available browser commands include `open`, `state`, `click`, `type`, `fill`, `select`, `keys`, `wait`, `get`, `find`, `extract`, `frames`, `screenshot`, `scroll`, `back`, `eval`, `network`, `tab list`, `tab new`, `tab select`, `tab close`, `chrome describe`, `chrome call`, and `close`.
 
-`opencli browser` commands require a `<session>` positional immediately after `browser`. `opencli browser work open <url>` and `opencli browser work tab new [url]` both return a target ID. Use `opencli browser work tab list` to inspect target IDs, then pass `--tab <targetId>` to route a command to a specific tab. `tab new` creates a new tab without changing the default browser target; only `tab select <targetId>` promotes that tab to the default target for later untargeted commands in the same session.
+`opencli browser` commands require a `--session <name>` option for page operations. `opencli browser --session work open <url>` and `opencli browser --session work tab new [url]` both return a target ID. Use `opencli browser --session work tab list` to inspect target IDs, then pass `--tab <targetId>` to route a command to a specific tab. `tab new` creates a new tab without changing the default browser target; only `tab select <targetId>` promotes that tab to the default target for later untargeted commands in the same session.
 
 ## Writing a new adapter
 
@@ -171,7 +195,7 @@ When the site you need is not yet covered, use the `opencli-adapter-author` skil
 | `OPENCLI_VERBOSE` | `false` | Enable verbose logging (`-v` flag also works) |
 | `DEBUG_SNAPSHOT` | — | Set to `1` for DOM snapshot debug output |
 
-`opencli browser *` requires an explicit `<session>` positional, uses a foreground browser window by default, and keeps that session's tab lease until `opencli browser <session> close` or idle cleanup. Browser-backed adapters use a background adapter window and release one-shot tab leases by default. Interactive adapters can declare `siteSession: 'persistent'` to keep a stable site tab for continuity; pass `--site-session ephemeral` for a one-shot tab.
+`opencli browser *` requires an explicit `--session <name>` option for page operations, uses a foreground browser window by default, and keeps that session's tab lease until `opencli browser --session <session> close` or idle cleanup. Browser-backed adapters use a background adapter window and release one-shot tab leases by default. Interactive adapters can declare `siteSession: 'persistent'` to keep a stable site tab for continuity; pass `--site-session ephemeral` for a one-shot tab.
 
 ## Built-in Commands
 
@@ -231,7 +255,7 @@ opencli xiaoyuzhou transcript 69dd0c98e2c8be31551f6a33 --output ./xiaoyuzhou-tra
 
 ## Output Formats
 
-All built-in commands support `--format` / `-f` with `table` (default), `json`, `yaml`, `md`, and `csv`.
+All built-in commands support `--format` / `-f` with `json` (default), `table`, `yaml`, `md`, and `csv`.
 
 ```bash
 opencli bilibili hot -f json    # Pipe to jq or LLMs

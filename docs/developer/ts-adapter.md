@@ -221,13 +221,13 @@ Use the `opencli-adapter-author` skill plus the `opencli browser *` primitives t
 
 ```bash
 # Recon on the target site
-opencli browser open https://example.com
-opencli browser network
-opencli browser state
+opencli browser --session research open https://example.com
+opencli browser --session research network
+opencli browser --session research state
 
 # Scaffold + verify
-opencli browser init mysite/trending
-opencli browser verify mysite/trending
+opencli adapter init mysite/trending
+opencli adapter test mysite/trending
 ```
 
 See [AI Workflow](/developer/ai-workflow) for the full loop and the adapter-author skill for the step-by-step runbook.
