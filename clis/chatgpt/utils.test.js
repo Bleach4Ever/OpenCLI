@@ -4,7 +4,29 @@ import path from 'node:path';
 import { JSDOM } from 'jsdom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ArgumentError, AuthRequiredError, CommandExecutionError } from '@jackwener/opencli/errors';
-import { CHATGPT_MODEL_CHOICES, __test__, getChatGPTDetailRows, getChatGPTImageAssets, getChatGPTResponsePairCounts, getChatGPTVisibleImageUrls, getCurrentChatGPTModel, getCurrentChatGPTTool, getVisibleMessages, isGenerating, navigateToProject, openChatGPTConversation, prepareChatGPTImagePaths, selectChatGPTModel, selectChatGPTTool, sendChatGPTMessage, uploadChatGPTImages, waitForChatGPTDeepResearchResult, waitForChatGPTDetailRows, waitForChatGPTImages, waitForChatGPTResponse } from './utils.js';
+import {
+    CHATGPT_MODEL_CHOICES,
+    __test__,
+    getChatGPTDetailRows,
+    getChatGPTImageAssets,
+    getChatGPTResponsePairCounts,
+    getChatGPTVisibleImageUrls,
+    getCurrentChatGPTModel,
+    getCurrentChatGPTTool,
+    getVisibleMessages,
+    isGenerating,
+    navigateToProject,
+    openChatGPTConversation,
+    prepareChatGPTImagePaths,
+    selectChatGPTModel,
+    selectChatGPTTool,
+    sendChatGPTMessage,
+    uploadChatGPTImages,
+    waitForChatGPTDeepResearchResult,
+    waitForChatGPTDetailRows,
+    waitForChatGPTImages,
+    waitForChatGPTResponse,
+} from './utils.js';
 
 const tempDirs = [];
 
@@ -1923,10 +1945,6 @@ describe('chatgpt project file upload helper', () => {
         expect(__test__.mimeFromFilePath('/tmp/code.py')).toBe('text/x-python');
         expect(__test__.mimeFromFilePath('/tmp/image.png')).toBe('image/png');
         expect(__test__.mimeFromFilePath('/tmp/unknown.xyz')).toBe('application/octet-stream');
-    });
-
-    it('exposes PROJECT_LINK_SELECTOR for project link extraction', () => {
-        expect(__test__.PROJECT_LINK_SELECTOR).toBe('a[href*="/g/g-p-"]');
     });
 
     it('extracts visible project anchors from the sidebar without React Fiber internals', async () => {

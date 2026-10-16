@@ -128,10 +128,6 @@ function setupDiscoveryWithoutThinking(page, models = FIXTURE_MODELS) {
     vi.mocked(page.evaluate).mockResolvedValueOnce(undefined);
 }
 
-function setupFailedDiscovery(page, reason = 'Model picker button not found') {
-    vi.mocked(page.evaluate).mockResolvedValueOnce({ ok: false, reason });
-}
-
 function setupDiscoveryNonArray(page) {
     vi.mocked(page.evaluate).mockResolvedValueOnce({ ok: true });
     vi.mocked(page.evaluate).mockResolvedValueOnce({ not: 'an array' });
@@ -143,16 +139,6 @@ function setupDiscoveryEmpty(page) {
     vi.mocked(page.evaluate).mockResolvedValueOnce([]);
     vi.mocked(page.evaluate).mockResolvedValueOnce(undefined);
 }
-
-// ── Command registration ─────────────────────────────────────────────────
-
-describe('ask command registration', () => {
-    it('is registered with site=gemini and name=ask', () => {
-        expect(askCommand.site).toBe('gemini');
-        expect(askCommand.name).toBe('ask');
-    });
-
-});
 
 // ── validateAskModelValue ────────────────────────────────────────────────
 

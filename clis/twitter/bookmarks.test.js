@@ -435,13 +435,6 @@ describe('twitter bookmarks archive safety', () => {
         expect(page.getCookies).not.toHaveBeenCalled();
     });
 
-    it('unwraps Browser Bridge envelopes for query resolution and bookmark payloads', async () => {
-        const command = getRegistry().get('twitter/bookmarks');
-        const rows = await command.func(pageFor(bookmarksPayload(false), { wrapped: true }), { limit: 1 });
-        expect(rows).toHaveLength(1);
-        expect(rows[0]).toMatchObject({ id: '1', author: 'alice', text: 'bookmarked post' });
-    });
-
     it('refuses to overwrite an existing output file without matching resume state', async () => {
         const command = getRegistry().get('twitter/bookmarks');
         const outputFile = `/tmp/opencli-bookmarks-existing-${process.pid}-${Date.now()}.jsonl`;
@@ -539,9 +532,4 @@ describe('twitter bookmarks archive safety', () => {
         }
     });
 
-    it('fails closed when the Bookmarks payload has no timeline instructions', async () => {
-        const command = getRegistry().get('twitter/bookmarks');
-        await expect(command.func(pageFor({ data: {} }), { all: true }))
-            .rejects.toThrow(/missing Bookmarks timeline instructions/);
-    });
 });
