@@ -7861,7 +7861,7 @@
     "access": "read",
     "domain": "dblp.org",
     "strategy": "public",
-    "browser": false,
+    "browser": true,
     "args": [
       {
         "name": "author",
@@ -7898,7 +7898,8 @@
     ],
     "type": "js",
     "modulePath": "dblp/author.js",
-    "sourceFile": "dblp/author.js"
+    "sourceFile": "dblp/author.js",
+    "navigateBefore": false
   },
   {
     "site": "dblp",
@@ -7911,7 +7912,7 @@
     "access": "read",
     "domain": "dblp.org",
     "strategy": "public",
-    "browser": false,
+    "browser": true,
     "args": [
       {
         "name": "key",
@@ -7935,7 +7936,8 @@
     ],
     "type": "js",
     "modulePath": "dblp/paper.js",
-    "sourceFile": "dblp/paper.js"
+    "sourceFile": "dblp/paper.js",
+    "navigateBefore": false
   },
   {
     "site": "dblp",
@@ -7944,7 +7946,7 @@
     "access": "read",
     "domain": "dblp.org",
     "strategy": "public",
-    "browser": false,
+    "browser": true,
     "args": [
       {
         "name": "query",
@@ -7974,7 +7976,8 @@
     ],
     "type": "js",
     "modulePath": "dblp/search.js",
-    "sourceFile": "dblp/search.js"
+    "sourceFile": "dblp/search.js",
+    "navigateBefore": false
   },
   {
     "site": "dblp",
@@ -7983,7 +7986,7 @@
     "access": "read",
     "domain": "dblp.org",
     "strategy": "public",
-    "browser": false,
+    "browser": true,
     "args": [
       {
         "name": "query",
@@ -8009,7 +8012,8 @@
     ],
     "type": "js",
     "modulePath": "dblp/venue.js",
-    "sourceFile": "dblp/venue.js"
+    "sourceFile": "dblp/venue.js",
+    "navigateBefore": false
   },
   {
     "site": "deepseek",
