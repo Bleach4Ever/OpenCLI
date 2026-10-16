@@ -176,6 +176,7 @@ Agent 在内部自动处理所有 `opencli browser` 命令——你只需用自�
 | `OPENCLI_SITE_SESSION` | adapter 默认值 | 设为 `ephemeral` 或 `persistent`，覆盖浏览器型 adapter 命令的 `siteSession` 元数据。`ephemeral` 会在命令结束时释放一次性标签页，自动化窗口会保留为可复用的容器；`persistent` 会复用该站点的 session。命令级 `--site-session` 优先。 |
 | `OPENCLI_BROWSER_CONNECT_TIMEOUT` | `45` | 浏览器连接超时（秒） |
 | `OPENCLI_BROWSER_COMMAND_TIMEOUT` | `60` | 单个浏览器命令超时（秒） |
+| `OPENCLI_BROWSER_IDLE_TIMEOUT` | 扩展默认值 | owned session 的 idle timeout（秒），命令级 `idleTimeout` 优先。不延长显式清理时间：ephemeral adapter 通常在命令结束时释放 tab；bound tab 和 persistent adapter session 忽略 idle timeout。释放 session 后，可复用的 window container 仍保留。 |
 | `OPENCLI_CDP_ENDPOINT` | — | Chrome DevTools Protocol 端点，用于远程浏览器 |
 | `OPENCLI_CDP_TARGET` | — | 按 URL 子串过滤 CDP target（如 `detail.1688.com`） |
 | `OPENCLI_VERBOSE` | `false` | 启用详细日志（`-v` 也可以） |
@@ -315,12 +316,17 @@ opencli plugin uninstall my-tool                            # 卸载
 
 当 plugin 的版本被记录到 `~/.opencli/plugins.lock.json` 后，`opencli plugin list` 也会显示对应的短 commit hash。
 
+Albato、Goofish 和 Taobao 需要从本地 adapter 子目录安装，见[安装说明](./docs/zh/guide/plugins.md#社区-adapter-集合)。
+
 | 插件 | 类型 | 描述 |
 |------|------|------|
+| [opencli-plugin-albato](https://github.com/vecyang1/opencli-plugin-albato) | JS | Albato 自动化工作流管理：方案查看、启停控制、失败诊断与重试 |
 | [opencli-plugin-amap](https://github.com/vecyang1/opencli-plugin-amap) | JS | 高德地图收藏地点与路线导出、坐标转换 (GCJ-02/WGS-84) 与 SSR 搜索 |
 | [opencli-plugin-github-trending](https://github.com/ByteYue/opencli-plugin-github-trending) | JS | GitHub Trending 仓库 |
+| [opencli-plugin-goofish](https://github.com/vecyang1/opencli-plugin-goofish) | JS | 闲鱼买家订单、收藏夹、私信消息、个人资料、商品搜索与交易履约统计 |
 | [opencli-plugin-hot-digest](https://github.com/ByteYue/opencli-plugin-hot-digest) | JS | 多平台热榜聚合 |
 | [opencli-plugin-juejin](https://github.com/Astro-Han/opencli-plugin-juejin) | JS | 稀土掘金热门文章 |
+| [opencli-plugin-taobao](https://github.com/vecyang1/opencli-plugin-taobao) | JS | 淘宝买家聊天记录、历史订单、已购店铺、收藏夹与基于关键词的聊天摘要 |
 | [opencli-plugin-vk](https://github.com/flobo3/opencli-plugin-vk) | JS | VK (VKontakte) 动态、信息流和搜索 |
 | [opencli-plugin-x-article-publisher](https://github.com/genoooool/opencli-plugin-x-article-publisher) | JS | 通过 OpenCLI 与 xPoster 将带本地图片的 Markdown 发布为 X 长文 |
 

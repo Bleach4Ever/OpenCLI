@@ -190,6 +190,7 @@ When the site you need is not yet covered, use the `opencli-adapter-author` skil
 | `OPENCLI_SITE_SESSION` | adapter default | Set to `ephemeral` or `persistent` to override `siteSession` metadata for browser-backed adapter commands. `ephemeral` releases the one-shot tab when the command finishes, and the automation window stays open as a reusable container; `persistent` reuses the site's session. Per-command `--site-session` takes precedence. |
 | `OPENCLI_BROWSER_CONNECT_TIMEOUT` | `45` | Seconds to wait for browser connection |
 | `OPENCLI_BROWSER_COMMAND_TIMEOUT` | `60` | Seconds to wait for a single browser command |
+| `OPENCLI_BROWSER_IDLE_TIMEOUT` | extension default | Owned session idle timeout in seconds; per-command `idleTimeout` takes precedence. Does not extend explicit cleanup: ephemeral adapters normally release their tab at command completion. Bound tabs and persistent adapter sessions ignore idle timeouts. Releasing a session keeps its reusable window container open. |
 | `OPENCLI_CDP_ENDPOINT` | — | Chrome DevTools Protocol endpoint for remote browsers |
 | `OPENCLI_CDP_TARGET` | — | Filter CDP targets by URL substring (e.g. `detail.1688.com`) |
 | `OPENCLI_VERBOSE` | `false` | Enable verbose logging (`-v` flag also works) |
@@ -278,12 +279,17 @@ opencli plugin update --all
 opencli plugin uninstall my-tool
 ```
 
+Albato, Goofish and Taobao use local adapter-subdirectory installation; see the [installation notes](./docs/guide/plugins.md#community-adapter-bundles).
+
 | Plugin | Type | Description |
 |--------|------|-------------|
+| [opencli-plugin-albato](https://github.com/vecyang1/opencli-plugin-albato) | JS | Albato automation workflow management: scenario inspection, start/pause, failure diagnosis, and retry |
 | [opencli-plugin-amap](https://github.com/vecyang1/opencli-plugin-amap) | JS | AutoNavi / 高德地图 spot & route extraction, coordinate decoders (GCJ-02 & WGS-84), and SSR search |
 | [opencli-plugin-github-trending](https://github.com/ByteYue/opencli-plugin-github-trending) | JS | GitHub Trending repositories |
+| [opencli-plugin-goofish](https://github.com/vecyang1/opencli-plugin-goofish) | JS | Goofish / 闲鱼 buyer orders, favorites, IM chat, profile, item search, and fulfillment stats |
 | [opencli-plugin-hot-digest](https://github.com/ByteYue/opencli-plugin-hot-digest) | JS | Multi-platform trending aggregator |
 | [opencli-plugin-juejin](https://github.com/Astro-Han/opencli-plugin-juejin) | JS | 稀土掘金 (Juejin) hot articles |
+| [opencli-plugin-taobao](https://github.com/vecyang1/opencli-plugin-taobao) | JS | Taobao buyer chat history, order history, bought shops, favorites, and keyword-based chat summaries |
 | [opencli-plugin-vk](https://github.com/flobo3/opencli-plugin-vk) | JS | VK (VKontakte) wall, feed, and search |
 | [opencli-plugin-x-article-publisher](https://github.com/genoooool/opencli-plugin-x-article-publisher) | JS | Publish Markdown with local images as X long-form Articles via OpenCLI and xPoster |
 

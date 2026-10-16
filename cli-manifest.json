@@ -41360,6 +41360,89 @@
   },
   {
     "site": "xiaohongshu",
+    "name": "comment",
+    "description": "在小红书笔记下发表评论（走页面自带的已签名请求层，需 --execute 才会真的发出）",
+    "access": "write",
+    "domain": "www.xiaohongshu.com",
+    "strategy": "cookie",
+    "browser": true,
+    "args": [
+      {
+        "name": "note",
+        "type": "str",
+        "required": true,
+        "positional": true,
+        "help": "Full note URL with xsec_token (preferred), or a 24-char hex note ID"
+      },
+      {
+        "name": "text",
+        "type": "str",
+        "required": true,
+        "positional": true,
+        "help": "Comment text to post"
+      },
+      {
+        "name": "execute",
+        "type": "boolean",
+        "required": false,
+        "help": "Actually post the comment. Without it the command refuses to write."
+      }
+    ],
+    "columns": [
+      "status",
+      "comment_id",
+      "url",
+      "message",
+      "verified"
+    ],
+    "type": "js",
+    "modulePath": "xiaohongshu/comment.js",
+    "sourceFile": "xiaohongshu/comment.js",
+    "navigateBefore": false
+  },
+  {
+    "site": "xiaohongshu",
+    "name": "comment-delete",
+    "description": "删除自己在小红书笔记下的评论（走页面自带的已签名请求层，需 --execute 才会真的删除）",
+    "access": "write",
+    "domain": "www.xiaohongshu.com",
+    "strategy": "cookie",
+    "browser": true,
+    "args": [
+      {
+        "name": "note",
+        "type": "str",
+        "required": true,
+        "positional": true,
+        "help": "Full note URL with xsec_token (preferred), or a 24-char hex note ID"
+      },
+      {
+        "name": "comment-id",
+        "type": "str",
+        "required": true,
+        "positional": true,
+        "help": "The comment ID to delete (as printed by `xiaohongshu comment`)"
+      },
+      {
+        "name": "execute",
+        "type": "boolean",
+        "required": false,
+        "help": "Actually delete the comment. Without it the command refuses to write."
+      }
+    ],
+    "columns": [
+      "status",
+      "comment_id",
+      "note_id",
+      "url"
+    ],
+    "type": "js",
+    "modulePath": "xiaohongshu/comment-delete.js",
+    "sourceFile": "xiaohongshu/comment-delete.js",
+    "navigateBefore": false
+  },
+  {
+    "site": "xiaohongshu",
     "name": "comments",
     "description": "获取小红书笔记评论（支持楼中楼子回复）",
     "access": "read",
@@ -43639,7 +43722,7 @@
         "type": "str",
         "required": true,
         "positional": true,
-        "help": "Channel ID (UCxxxx) or handle (@name)"
+        "help": "Channel ID (UCxxxx) or handle (@name or name)"
       },
       {
         "name": "limit",
@@ -43657,6 +43740,48 @@
     "modulePath": "youtube/channel.js",
     "sourceFile": "youtube/channel.js",
     "navigateBefore": "https://www.youtube.com"
+  },
+  {
+    "site": "youtube",
+    "name": "comment",
+    "description": "Post a top-level comment on a YouTube video (requires --execute)",
+    "access": "write",
+    "domain": "www.youtube.com",
+    "strategy": "cookie",
+    "browser": true,
+    "args": [
+      {
+        "name": "url",
+        "type": "str",
+        "required": true,
+        "positional": true,
+        "help": "YouTube video URL or video ID"
+      },
+      {
+        "name": "text",
+        "type": "str",
+        "required": true,
+        "positional": true,
+        "help": "Comment text to post"
+      },
+      {
+        "name": "execute",
+        "type": "boolean",
+        "required": false,
+        "help": "Actually post the comment. Without it the command refuses to write."
+      }
+    ],
+    "columns": [
+      "status",
+      "comment_id",
+      "url",
+      "message",
+      "verified"
+    ],
+    "type": "js",
+    "modulePath": "youtube/comment.js",
+    "sourceFile": "youtube/comment.js",
+    "navigateBefore": false
   },
   {
     "site": "youtube",
@@ -43716,6 +43841,7 @@
       "rank",
       "title",
       "channel",
+      "channel_avatar",
       "video_id",
       "views",
       "duration",
@@ -43900,6 +44026,8 @@
       "rank",
       "title",
       "channel",
+      "channel_avatar",
+      "video_id",
       "views",
       "duration",
       "published",

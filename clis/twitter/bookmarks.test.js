@@ -204,7 +204,7 @@ describe('twitter bookmarks parser', () => {
     });
 
     it('returns empty tweets + null cursor for unknown envelope', () => {
-        expect(parseBookmarks({}, new Set())).toEqual({ tweets: [], nextCursor: null });
+        expect(parseBookmarks({}, new Set())).toEqual({ tweets: [], nextCursor: null, hasTimelineItems: false });
     });
 });
 
@@ -337,6 +337,71 @@ describe('twitter bookmarks command', () => {
             expect(result.cursor).toBeUndefined();
             expect(fs.existsSync(resumeFile)).toBe(false);
             expect(fs.existsSync(outputFile)).toBe(true);
+        }
+        finally {
+            fs.rmSync(resumeFile, { force: true });
+            fs.rmSync(outputFile, { force: true });
+        }
+    });
+
+    it('treats empty bookmarks page with repeated cursor as timeline exhaustion', async () => {
+        const command = getRegistry().get('twitter/bookmarks');
+        const resumeFile = `/tmp/opencli-bookmarks-resume-rep-${process.pid}-${Date.now()}.json`;
+        const outputFile = `/tmp/opencli-bookmarks-out-rep-${process.pid}-${Date.now()}.jsonl`;
+        fs.writeFileSync(resumeFile, JSON.stringify({
+            cursor: 'END_CURSOR',
+            count: 5,
+            complete: false,
+            source: 'bookmarks',
+            outputFile,
+        }));
+        fs.writeFileSync(outputFile, '{"id":"1"}\n{"id":"2"}\n{"id":"3"}\n{"id":"4"}\n{"id":"5"}\n');
+
+        const page = {
+            getCookies: vi.fn(async () => [{ name: 'ct0', value: 'token' }]),
+            evaluate: vi.fn(async (script) => {
+                const text = String(script);
+                if (text.includes('Bookmarks') && text.includes('queryId')) return null;
+                if (text.includes('/Bookmarks')) {
+                    return {
+                        data: {
+                            bookmark_timeline_v2: {
+                                timeline: {
+                                    instructions: [{
+                                        entries: [{
+                                            entryId: 'cursor-bottom-1',
+                                            content: {
+                                                entryType: 'TimelineTimelineCursor',
+                                                cursorType: 'Bottom',
+                                                value: 'END_CURSOR',
+                                                stopOnEmptyResponse: true,
+                                            },
+                                        }],
+                                    }],
+                                },
+                            },
+                        },
+                    };
+                }
+                throw new Error(`Unexpected evaluate: ${text.slice(0, 80)}`);
+            }),
+        };
+
+        try {
+            const result = await command.func(page, {
+                all: true,
+                'max-pages': 2,
+                'resume-file': resumeFile,
+                'output-file': outputFile,
+            });
+
+            expect(result).toMatchObject({
+                outputFile,
+                count: 5,
+                source: 'bookmarks',
+                complete: true,
+            });
+            expect(fs.existsSync(resumeFile)).toBe(false);
         }
         finally {
             fs.rmSync(resumeFile, { force: true });
