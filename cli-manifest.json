@@ -43722,7 +43722,7 @@
         "type": "str",
         "required": true,
         "positional": true,
-        "help": "Channel ID (UCxxxx) or handle (@name)"
+        "help": "Channel ID (UCxxxx) or handle (@name or name)"
       },
       {
         "name": "limit",

@@ -68,3 +68,5 @@ opencli youtube comment "https://www.youtube.com/watch?v=xxx" "Great video!" --e
 
 - `feed` and `search` emit `channel_avatar` (largest thumbnail the list page carries) and `video_id`; both are empty for result types that have no channel avatar or video, such as playlist lockups
 - `video` falls back to the channel's own browse response for `channelAvatar` / `subscribers` when the watch page ships no `videoOwnerRenderer` — one extra InnerTube call, only on the pages that need it
+
+`channel` accepts a channel ID (`UC…`) or a handle with or without `@` (for example, `opencli youtube channel halfbraindev`). Handles are resolved before channel data is requested; unresolved handles return an error.
