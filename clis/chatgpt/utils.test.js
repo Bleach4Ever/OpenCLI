@@ -1805,6 +1805,7 @@ describe('chatgpt image upload helper', () => {
             }),
         };
 
+        page.evaluateOnce = page.evaluate;
         const result = await uploadChatGPTImages(page, [filePath]);
 
         expect(result).toEqual({ ok: true, files: [filePath] });

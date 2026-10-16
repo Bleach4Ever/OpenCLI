@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { JSDOM } from 'jsdom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { uploadChatGPTFiles, sendChatGPTMessage, getVisibleMessages } from './utils.js';
+import { uploadChatGPTImages, uploadChatGPTFiles, sendChatGPTMessage, getVisibleMessages } from './utils.js';
 const dirs = [];
 const doms = [];
 afterEach(() => { for (const dir of dirs.splice(0)) fs.rmSync(dir, { recursive:true,force:true }); for(const dom of doms.splice(0))dom.window.close(); });
@@ -203,5 +203,59 @@ describe('ChatGPT file upload scope',()=>{
     await expect(sendChatGPTMessage(f.page,'Synthetic prompt')).resolves.toBe(true);
     expect(f.document.activeElement).toBe(f.scope.querySelector('[contenteditable]'));
     expect(correct).toHaveBeenCalledTimes(1);expect(wrong).not.toHaveBeenCalled();
+  });
+});
+
+describe('ChatGPT image chunk fallback', () => {
+  function imageFixture() {
+    const f = fixture();
+    const image = path.join(path.dirname(f.file), 'reference.png');
+    const bytes = Buffer.alloc(1500001);
+    for (let i = 0; i < bytes.length; i++) bytes[i] = i % 251;
+    fs.writeFileSync(image, bytes);
+    const input = f.scope.querySelector('input');
+    Object.defineProperty(input, 'files', { writable: true, value: [] });
+    f.dom.window.File = File;
+    f.dom.window.DataTransfer = class { constructor() { this.files = []; this.items = { add: file => this.files.push(file) }; } };
+    const changed = vi.fn(() => chip(f.document, f.scope, 'reference.png'));
+    input.__reactProps$test = { onChange: changed };
+    f.page.setFileInput.mockRejectedValue(new Error('fileChooserOpened not received within 5s'));
+    return { ...f, image, bytes, input, changed };
+  }
+  it('preserves large image bytes and MIME in bounded requests with one final change', async () => {
+    const f = imageFixture();
+    await expect(uploadChatGPTImages(f.page, [f.image])).resolves.toMatchObject({ ok: true });
+    expect(f.input.files[0].type).toBe('image/png');
+    expect(Buffer.from(await f.input.files[0].arrayBuffer()).equals(f.bytes)).toBe(true);
+    expect(f.changed).toHaveBeenCalledTimes(1);
+    expect(f.page.evaluateOnce).toHaveBeenCalledTimes(1);
+    expect(Math.max(...f.page.evaluate.mock.calls.map(([script]) => Buffer.byteLength(JSON.stringify({ code: script }))))).toBeLessThan(400000);
+    expect(f.input.__opencliFileChunks).toBeUndefined();
+  });
+  it('cleans incomplete image chunks without assigning any files', async () => {
+    const f = imageFixture();
+    const evaluate = f.page.evaluate.getMockImplementation();
+    f.page.evaluate.mockImplementation(script => { if (script.includes('.chunks[1] =')) throw new Error('transfer interrupted'); return evaluate(script); });
+    await expect(uploadChatGPTImages(f.page, [f.image])).rejects.toThrow('transfer interrupted');
+    expect(f.input.files).toEqual([]);
+    expect(f.changed).not.toHaveBeenCalled();
+    expect(f.page.evaluateOnce).not.toHaveBeenCalled();
+    expect(f.input.__opencliFileChunks).toBeUndefined();
+  });
+  it('never retries a final assignment whose response was lost', async () => {
+    const f = imageFixture();
+    const once = f.page.evaluateOnce.getMockImplementation();
+    f.page.evaluateOnce.mockImplementation(async script => { await once(script); throw new Error('response lost'); });
+    await expect(uploadChatGPTImages(f.page, [f.image])).rejects.toThrow('response lost');
+    expect(f.changed).toHaveBeenCalledTimes(1);
+    expect(f.page.evaluateOnce).toHaveBeenCalledTimes(1);
+    expect(f.input.__opencliFileChunks).toBeUndefined();
+  });
+  it('does not fall back on an uncertain native upload failure', async () => {
+    const f = imageFixture();
+    f.page.setFileInput.mockRejectedValue(new Error('transport closed after dispatch'));
+    await expect(uploadChatGPTImages(f.page, [f.image])).rejects.toThrow('transport closed');
+    expect(f.page.evaluate).not.toHaveBeenCalled();
+    expect(f.page.evaluateOnce).not.toHaveBeenCalled();
   });
 });

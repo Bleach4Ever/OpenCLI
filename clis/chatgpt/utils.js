@@ -2537,8 +2537,97 @@ async function waitForChatGPTUploadPreview(page, fileNames) {
     return false;
 }
 
-export async function uploadChatGPTImages(page, imagePaths) {
+async function uploadChatGPTChunkedFiles(page, paths, selector, mimeForPath) {
     const fs = await import('node:fs');
+    const path = await import('node:path');
+    if (typeof page.evaluateOnce !== 'function') {
+        throw new CommandExecutionError('File upload fallback requires a browser backend with evaluateOnce support.');
+    }
+    if (paths.some(file => fs.default.statSync(file).size > 25 * 1024 * 1024)) {
+        return { ok: false, reason: 'Uploads over 25 MB require a current Browser Bridge extension with native file-input support' };
+    }
+    // Base64 can exceed the daemon's 1 MB request limit. Stage bounded,
+    // idempotent chunks on the pinned input, then assign files only once.
+    const chunkSize = 192 * 1024;
+    const files = paths.map(absPath => ({
+        name: path.default.basename(absPath),
+        mime: mimeForPath(absPath),
+        bytes: fs.default.readFileSync(absPath),
+    }));
+    let fallbackResult;
+    try {
+        await page.evaluate(`(() => {
+            const input = document.querySelector(${JSON.stringify(selector)});
+            if (!(input instanceof HTMLInputElement)) throw new Error('Pinned file input disappeared');
+            input.__opencliFileChunks = ${JSON.stringify(files.map(file => ({ name: file.name, mime: file.mime, count: Math.max(1, Math.ceil(file.bytes.length / chunkSize)), chunks: [] })))};
+            return true;
+        })()`);
+        for (let fileIndex = 0; fileIndex < files.length; fileIndex += 1) {
+            const bytes = files[fileIndex].bytes;
+            const count = Math.max(1, Math.ceil(bytes.length / chunkSize));
+            for (let index = 0; index < count; index += 1) {
+                const chunk = bytes.subarray(index * chunkSize, (index + 1) * chunkSize).toString('base64');
+                await page.evaluate(`(() => {
+                    const input = document.querySelector(${JSON.stringify(selector)});
+                    if (!input?.__opencliFileChunks) throw new Error('Pinned file input disappeared');
+                    input.__opencliFileChunks[${fileIndex}].chunks[${index}] = ${JSON.stringify(chunk)};
+                    return true;
+                })()`);
+            }
+        }
+        fallbackResult = requireObjectEvaluateResult(unwrapEvaluateResult(await page.evaluateOnce(`
+        (() => {
+            const input = document.querySelector(${JSON.stringify(selector)});
+            const files = input?.__opencliFileChunks;
+            if (!Array.isArray(files)) return { ok: false, reason: 'staged file data is missing' };
+            if (!(input instanceof HTMLInputElement)) {
+                return { ok: false, reason: 'file input not found' };
+            }
+
+            const dt = new DataTransfer();
+            for (const item of files) {
+                if (item.chunks.length !== item.count || Array.from({ length: item.count }, (_, index) => item.chunks[index]).some(chunk => typeof chunk !== 'string')) {
+                    return { ok: false, reason: 'staged file data is incomplete' };
+                }
+                const parts = item.chunks.map(chunk => {
+                    const binary = atob(chunk);
+                    return Uint8Array.from(binary, char => char.charCodeAt(0));
+                });
+                dt.items.add(new File(parts, item.name, { type: item.mime }));
+            }
+            input.files = dt.files;
+
+            const propsKey = Object.keys(input).find(key => key.startsWith('__reactProps$'));
+            if (propsKey && input[propsKey] && typeof input[propsKey].onChange === 'function') {
+                const nativeEvent = new Event('change', { bubbles: true });
+                input[propsKey].onChange({
+                    target: input,
+                    currentTarget: input,
+                    nativeEvent,
+                    preventDefault() {},
+                    stopPropagation() {},
+                    isDefaultPrevented() { return false; },
+                    isPropagationStopped() { return false; },
+                    persist() {},
+                });
+            } else {
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            return { ok: true };
+        })()
+    `)), 'chatgpt file upload fallback');
+    } finally {
+        await page.evaluate(`(() => {
+            const input = document.querySelector(${JSON.stringify(selector)});
+            if (input) delete input.__opencliFileChunks;
+            return true;
+        })()`);
+    }
+    return fallbackResult;
+}
+
+export async function uploadChatGPTImages(page, imagePaths) {
     const path = await import('node:path');
     const prepared = await prepareChatGPTImagePaths(imagePaths);
     if (!prepared.ok) return prepared;
@@ -2553,55 +2642,14 @@ export async function uploadChatGPTImages(page, imagePaths) {
             uploaded = true;
         } catch (err) {
             const msg = String(err?.message || err);
-            if (!msg.includes('Unknown action') && !msg.includes('not supported') && !msg.includes('Not allowed') && !msg.includes('No element found')) {
+            if (!msg.includes('Unknown action') && !msg.includes('not supported') && !msg.includes('Not allowed') && !msg.includes('No element found') && !msg.includes('fileChooserOpened not received')) {
                 throw err;
             }
         }
     }
 
     if (!uploaded) {
-        const files = absPaths.map(absPath => ({
-            name: path.default.basename(absPath),
-            mime: imageMimeFromPath(absPath),
-            base64: fs.default.readFileSync(absPath).toString('base64'),
-        }));
-        const fallbackResult = requireObjectEvaluateResult(unwrapEvaluateResult(await page.evaluate(`
-            (() => {
-                const files = ${JSON.stringify(files)};
-                const input = document.querySelector('input[type="file"]');
-                if (!(input instanceof HTMLInputElement)) {
-                    return { ok: false, reason: 'file input not found' };
-                }
-
-                const dt = new DataTransfer();
-                for (const item of files) {
-                    const binary = atob(item.base64);
-                    const bytes = new Uint8Array(binary.length);
-                    for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-                    dt.items.add(new File([bytes], item.name, { type: item.mime }));
-                }
-                input.files = dt.files;
-
-                const propsKey = Object.keys(input).find(key => key.startsWith('__reactProps$'));
-                if (propsKey && input[propsKey] && typeof input[propsKey].onChange === 'function') {
-                    const nativeEvent = new Event('change', { bubbles: true });
-                    input[propsKey].onChange({
-                        target: input,
-                        currentTarget: input,
-                        nativeEvent,
-                        preventDefault() {},
-                        stopPropagation() {},
-                        isDefaultPrevented() { return false; },
-                        isPropagationStopped() { return false; },
-                        persist() {},
-                    });
-                } else {
-                    input.dispatchEvent(new Event('input', { bubbles: true }));
-                    input.dispatchEvent(new Event('change', { bubbles: true }));
-                }
-                return { ok: true };
-            })()
-        `)), 'chatgpt image upload fallback');
+        const fallbackResult = await uploadChatGPTChunkedFiles(page, absPaths, 'input[type="file"]', imageMimeFromPath);
         if (fallbackResult && !fallbackResult.ok) return fallbackResult;
     }
 
@@ -2654,7 +2702,6 @@ export async function uploadChatGPTFiles(page, filePaths) {
         return { ok: true };
     })()`)), 'chatgpt file input targeting');
     if (!target.ok) return target;
-    const fs = await import('node:fs');
     let uploaded = false;
     if (typeof page.setFileInput === 'function') {
         try {
@@ -2667,90 +2714,7 @@ export async function uploadChatGPTFiles(page, filePaths) {
         }
     }
     if (!uploaded) {
-        if (typeof page.evaluateOnce !== 'function') {
-            throw new CommandExecutionError('File upload fallback requires a browser backend with evaluateOnce support.');
-        }
-        if (prepared.paths.some(file => fs.default.statSync(file).size > 25 * 1024 * 1024)) {
-            return { ok: false, reason: 'Uploads over 25 MB require a current Browser Bridge extension with native file-input support' };
-        }
-        // Base64 can exceed the daemon's 1 MB request limit. Stage bounded,
-        // idempotent chunks on the pinned input, then assign files only once.
-        const chunkSize = 192 * 1024;
-        const files = prepared.paths.map(absPath => ({
-            name: path.default.basename(absPath),
-            mime: mimeFromFilePath(absPath),
-            bytes: fs.default.readFileSync(absPath),
-        }));
-        let fallbackResult;
-        try {
-            await page.evaluate(`(() => {
-                const input = document.querySelector('[data-opencli-file-input="1"]');
-                if (!(input instanceof HTMLInputElement)) throw new Error('Pinned file input disappeared');
-                input.__opencliFileChunks = ${JSON.stringify(files.map(file => ({ name: file.name, mime: file.mime, count: Math.max(1, Math.ceil(file.bytes.length / chunkSize)), chunks: [] })))};
-                return true;
-            })()`);
-            for (let fileIndex = 0; fileIndex < files.length; fileIndex += 1) {
-                const bytes = files[fileIndex].bytes;
-                const count = Math.max(1, Math.ceil(bytes.length / chunkSize));
-                for (let index = 0; index < count; index += 1) {
-                    const chunk = bytes.subarray(index * chunkSize, (index + 1) * chunkSize).toString('base64');
-                    await page.evaluate(`(() => {
-                        const input = document.querySelector('[data-opencli-file-input="1"]');
-                        if (!input?.__opencliFileChunks) throw new Error('Pinned file input disappeared');
-                        input.__opencliFileChunks[${fileIndex}].chunks[${index}] = ${JSON.stringify(chunk)};
-                        return true;
-                    })()`);
-                }
-            }
-            fallbackResult = requireObjectEvaluateResult(unwrapEvaluateResult(await page.evaluateOnce(`
-            (() => {
-                const input = document.querySelector('[data-opencli-file-input="1"]');
-                const files = input?.__opencliFileChunks;
-                if (!Array.isArray(files)) return { ok: false, reason: 'staged file data is missing' };
-                if (!(input instanceof HTMLInputElement)) {
-                    return { ok: false, reason: 'file input not found' };
-                }
-
-                const dt = new DataTransfer();
-                for (const item of files) {
-                    if (item.chunks.length !== item.count || Array.from({ length: item.count }, (_, index) => item.chunks[index]).some(chunk => typeof chunk !== 'string')) {
-                        return { ok: false, reason: 'staged file data is incomplete' };
-                    }
-                    const parts = item.chunks.map(chunk => {
-                        const binary = atob(chunk);
-                        return Uint8Array.from(binary, char => char.charCodeAt(0));
-                    });
-                    dt.items.add(new File(parts, item.name, { type: item.mime }));
-                }
-                input.files = dt.files;
-
-                const propsKey = Object.keys(input).find(key => key.startsWith('__reactProps$'));
-                if (propsKey && input[propsKey] && typeof input[propsKey].onChange === 'function') {
-                    const nativeEvent = new Event('change', { bubbles: true });
-                    input[propsKey].onChange({
-                        target: input,
-                        currentTarget: input,
-                        nativeEvent,
-                        preventDefault() {},
-                        stopPropagation() {},
-                        isDefaultPrevented() { return false; },
-                        isPropagationStopped() { return false; },
-                        persist() {},
-                    });
-                } else {
-                    input.dispatchEvent(new Event('input', { bubbles: true }));
-                    input.dispatchEvent(new Event('change', { bubbles: true }));
-                }
-                return { ok: true };
-            })()
-        `)), 'chatgpt file upload fallback');
-        } finally {
-            await page.evaluate(`(() => {
-                const input = document.querySelector('[data-opencli-file-input="1"]');
-                if (input) delete input.__opencliFileChunks;
-                return true;
-            })()`);
-        }
+        const fallbackResult = await uploadChatGPTChunkedFiles(page, prepared.paths, '[data-opencli-file-input="1"]', mimeFromFilePath);
         if (fallbackResult && !fallbackResult.ok) return fallbackResult;
     }
 
