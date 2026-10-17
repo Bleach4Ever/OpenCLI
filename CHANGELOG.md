@@ -23,6 +23,7 @@ A major release focused on agent experience: a smaller CLI surface, predictable 
 
 ### Fixes
 
+- Exclude Chrome 155 browser toolbar targets from direct CDP page selection so blank tabs remain usable.
 - More reliable ChatGPT file/image uploads and composer targeting; current Gemini, Grok, and DeepSeek composer flows.
 - Xiaohongshu captcha/search/comment handling, Taobao cart confirmation and blocked-page detection, DBLP browser-backed XML reads, and YouTube channel-handle resolution.
 - Plugin path containment and host-package linking, browser upload file chooser activation, auth recovery hints, and structured error/exit-code handling.
