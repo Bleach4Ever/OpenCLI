@@ -127,7 +127,9 @@ export const command = cli({
         }
         assertReadableUserSnapshot(snapshot);
         const byId = new Map(extractXhsUserNotes(snapshot ?? {}, userId).map(row => [row.id, row]));
-        const maxScrolls = Math.min(100, Math.max(6, Math.ceil(limit / 10) + 3));
+        // Bound browser work, not the validated result limit; partial stops emit a warning.
+        const requestedScrolls = Math.ceil(limit / 10) + 3;
+        const maxScrolls = Math.min(100, Math.max(6, requestedScrolls));
         let stagnantRounds = 0;
         let stopped = 'scroll limit';
         for (let i = 0; byId.size < limit && i < maxScrolls; i += 1) {
