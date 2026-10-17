@@ -17495,7 +17495,7 @@
     "type": "js",
     "modulePath": "instagram/profile.js",
     "sourceFile": "instagram/profile.js",
-    "navigateBefore": "https://www.instagram.com"
+    "navigateBefore": false
   },
   {
     "site": "instagram",
@@ -17644,7 +17644,7 @@
     "type": "js",
     "modulePath": "instagram/search.js",
     "sourceFile": "instagram/search.js",
-    "navigateBefore": "https://www.instagram.com"
+    "navigateBefore": false
   },
   {
     "site": "instagram",
@@ -17809,7 +17809,7 @@
     "type": "js",
     "modulePath": "instagram/user.js",
     "sourceFile": "instagram/user.js",
-    "navigateBefore": "https://www.instagram.com"
+    "navigateBefore": false
   },
   {
     "site": "instagram",
