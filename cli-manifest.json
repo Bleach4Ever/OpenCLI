@@ -35461,7 +35461,7 @@
   {
     "site": "tiktok",
     "name": "user",
-    "description": "Get recent videos from a TikTok user via page-context APIs",
+    "description": "Get recent videos from a TikTok user from page-rendered responses",
     "access": "read",
     "domain": "www.tiktok.com",
     "strategy": "cookie",
@@ -35500,7 +35500,7 @@
     "type": "js",
     "modulePath": "tiktok/user.js",
     "sourceFile": "tiktok/user.js",
-    "navigateBefore": "https://www.tiktok.com"
+    "navigateBefore": false
   },
   {
     "site": "tiktok",
