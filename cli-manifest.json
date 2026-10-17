@@ -7417,7 +7417,8 @@
     "type": "js",
     "modulePath": "ctrip/flight.js",
     "sourceFile": "ctrip/flight.js",
-    "navigateBefore": false
+    "navigateBefore": false,
+    "defaultWindowMode": "foreground"
   },
   {
     "site": "ctrip",
