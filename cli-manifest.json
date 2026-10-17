@@ -42363,7 +42363,14 @@
         "type": "int",
         "default": 15,
         "required": false,
-        "help": "Number of notes to return"
+        "help": "Number of notes to return (1-1000)"
+      },
+      {
+        "name": "timeout",
+        "type": "int",
+        "default": 300,
+        "required": false,
+        "help": "Maximum loading time in seconds (1-1800)"
       }
     ],
     "columns": [
