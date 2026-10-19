@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- Avoid duplicate browser navigations during extension tab lease creation, which can cause Chromium's `Navigation rejected.` error without `--trace` (#2487).
+
 ## [2.0.0](https://github.com/jackwener/opencli/compare/v1.8.8...v2.0.0) (2026-10-17)
 
 A major release focused on agent experience: a smaller CLI surface, predictable JSON results, native Chrome APIs, and evidence-driven adapter development. Includes Chrome extension **1.0.25**.
